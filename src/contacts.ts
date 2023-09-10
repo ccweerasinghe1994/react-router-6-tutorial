@@ -4,14 +4,18 @@ import sortBy from 'sort-by';
 
 export type ContactT = {
 	id: string;
-	first: string;
-	last: string;
-	favorite: boolean;
+	first?: string;
+	last?: string;
+	favorite?: boolean;
+	createdAt: number;
+	avatar?: string;
+	twitter?: string;
+	notes?: string;
 }
 
-export async function getContacts(query: string) {
+export async function getContacts(query?: string|null) {
 	await fakeNetwork(`getContacts:${query}`);
-	let contacts: readonly ContactT[] | null = await localforage.getItem(
+	let contacts: ContactT[] | null = await localforage.getItem(
 		'contacts'
 	);
 	if (!contacts) contacts = [];
@@ -23,35 +27,37 @@ export async function getContacts(query: string) {
 
 export async function createContact() {
 	await fakeNetwork();
-	let id = Math.random().toString(36).substring(2, 9);
-	let contact = { id, createdAt: Date.now() };
-	let contacts = await getContacts();
+	const id = Math.random().toString(36).substring(2, 9);
+	const contact = { id, createdAt: Date.now() };
+	const contacts = await getContacts();
 	contacts.unshift(contact);
 	await set(contacts);
 	return contact;
 }
 
-export async function getContact(id) {
+export async function getContact(id:string|undefined) {
+	if (!id) throw new Error(`No id provided`);
 	await fakeNetwork(`contact:${id}`);
-	let contacts = await localforage.getItem('contacts');
-	let contact = contacts.find((contact) => contact.id === id);
+	const contacts:ContactT[] | null = await localforage.getItem('contacts');
+	const contact = contacts && contacts.find((contact) => contact.id === id);
 	return contact ?? null;
 }
 
-export async function updateContact(id, updates) {
+export async function updateContact(id:string|undefined, updates:Partial<ContactT>) {
+	if (!id) throw new Error(`No id provided`);
 	await fakeNetwork();
-	let contacts = await localforage.getItem('contacts');
-	let contact = contacts.find((contact) => contact.id === id);
-	if (!contact) throw new Error('No contact found for', id);
+	const contacts:ContactT[] | null = await localforage.getItem('contacts');
+	const contact = contacts &&  contacts.find((contact) => contact.id === id);
+	if (!contact) throw new Error(`No contact found for ${id})`)
 	Object.assign(contact, updates);
 	await set(contacts);
 	return contact;
 }
 
-export async function deleteContact(id) {
-	let contacts = await localforage.getItem('contacts');
-	let index = contacts.findIndex((contact) => contact.id === id);
-	if (index > -1) {
+export async function deleteContact(id:string|undefined) {
+	const contacts :ContactT[] | null = await localforage.getItem('contacts');
+	const index = contacts ? contacts.findIndex((contact:ContactT) => contact.id === id):-1;
+	if (index > -1 && contacts) {
 		contacts.splice(index, 1);
 		await set(contacts);
 		return true;
@@ -59,23 +65,27 @@ export async function deleteContact(id) {
 	return false;
 }
 
-function set(contacts) {
+function set(contacts:ContactT[]) {
 	return localforage.setItem('contacts', contacts);
 }
-
+type fakeCacheT = {
+	[key:string]: boolean;
+}
 // fake a cache so we don't slow down stuff we've already seen
-let fakeCache = {};
+let fakeCache:fakeCacheT = {};
 
-async function fakeNetwork(key) {
+async function fakeNetwork(key?:string) {
+	// TODO add types for the fakeCache
+
 	if (!key) {
-		fakeCache = {};
+		fakeCache= {};
 	}
 
-	if (fakeCache[key]) {
+	if (key && fakeCache[key]) {
 		return;
 	}
 
-	fakeCache[key] = true;
+	key ? fakeCache[key] = true : null;
 	return new Promise((res) => {
 		setTimeout(res, Math.random() * 800);
 	});

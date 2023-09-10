@@ -6,7 +6,7 @@ const ErrorPage = () => {
 	if(isRouteErrorResponse(error)){
 		if (error.status===404){
 			const {message,statusText} = error;
-			Errormessage = <i>{statusText || message}</i>
+			Errormessage = <i>{statusText || (message ?? 'some thing went wrong')}</i>
 		}
 	}
 	console.error(error);

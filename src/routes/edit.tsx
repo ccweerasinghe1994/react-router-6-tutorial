@@ -1,16 +1,20 @@
-import { Form, useLoaderData, redirect } from 'react-router-dom';
+import {Form, useLoaderData, redirect, useNavigate} from 'react-router-dom';
 import { updateContact } from '../contacts';
-
-export async function action({ request, params }) {
+import {LoaderFunctionArgs} from "react-router";
+import {LoaderDataT} from "../Components/Contact.tsx";
+export async function action({ request, params }:LoaderFunctionArgs) {
 	const formData = await request.formData();
 	const updates = Object.fromEntries(formData);
-	await updateContact(params.contactId, updates);
+	await updateContact(params?.contactId ?? undefined, updates);
 	return redirect(`/contacts/${params.contactId}`);
 }
 
 const EditContact = () => {
-	const { contact } = useLoaderData();
-
+	const { contact } = useLoaderData() as LoaderDataT;
+	const navigate = useNavigate();
+	if (!contact) {
+		throw new Error('Contact not found');
+	}
 	return (
 		<Form method="post" id="contact-form">
 			<p>
@@ -55,7 +59,7 @@ const EditContact = () => {
 			</label>
 			<p>
 				<button type="submit">Save</button>
-				<button type="button">Cancel</button>
+				<button type="button" onClick={()=>{navigate(-1)}}>Cancel</button>
 			</p>
 		</Form>
 	);
